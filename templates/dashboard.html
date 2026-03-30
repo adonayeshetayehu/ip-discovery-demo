@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>IP Discovery Dashboard — CGIAR Research Network</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+     background:#f3f4f6;color:#111827;line-height:1.5;min-height:100vh}
+
+/* Header */
+header{background:linear-gradient(135deg,#064e3b 0%,#065f46 50%,#047857 100%);
+       padding:32px 48px;color:#fff}
+header h1{font-size:1.5rem;font-weight:700;letter-spacing:-.3px}
+header p{font-size:.85rem;opacity:.75;margin-top:4px}
+
+/* Overview cards */
+.overview{display:flex;gap:20px;padding:32px 48px 0;flex-wrap:wrap}
+.stat-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+           padding:24px 32px;flex:1;min-width:160px;
+           box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.stat-card .num{font-size:2.8rem;font-weight:800;line-height:1;color:#065f46}
+.stat-card .lbl{font-size:.78rem;font-weight:600;color:#6b7280;
+                text-transform:uppercase;letter-spacing:.6px;margin-top:6px}
+.stat-card .sub{font-size:.75rem;color:#9ca3af;margin-top:2px}
+
+/* Table section */
+.table-section{padding:28px 48px 48px}
+.table-controls{display:flex;gap:12px;align-items:center;
+                margin-bottom:16px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;max-width:440px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                 color:#9ca3af;pointer-events:none}
+#search{width:100%;padding:9px 12px 9px 34px;border:1px solid #d1d5db;
+        border-radius:8px;font-size:.88rem;background:#fff;color:#111827}
+#search:focus{outline:none;border-color:#059669;
+              box-shadow:0 0 0 3px rgba(5,150,105,.15)}
+.sort-wrap{display:flex;align-items:center;gap:8px}
+.sort-wrap label{font-size:.82rem;color:#6b7280;white-space:nowrap}
+#sort-select{padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;
+             font-size:.85rem;background:#fff;color:#111827;cursor:pointer}
+#sort-select:focus{outline:none;border-color:#059669}
+.result-count{font-size:.78rem;color:#9ca3af;margin-left:auto}
+
+/* Table */
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+      overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+table{width:100%;border-collapse:collapse;font-size:.875rem}
+thead tr{background:#f9fafb;border-bottom:2px solid #e5e7eb}
+th{padding:12px 16px;text-align:left;font-size:.72rem;font-weight:700;
+   color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+td{padding:14px 16px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+.paper-row{cursor:pointer;transition:background .12s}
+.paper-row:hover{background:#f0fdf4}
+.paper-row.expanded{background:#ecfdf5;border-left:3px solid #059669}
+.paper-row.excluded-row{background:#fafafa;cursor:default;opacity:.65}
+.paper-row.excluded-row:hover{background:#fafafa}
+.paper-row:last-child td{border-bottom:none}
+.row-toggle{color:#9ca3af;font-size:.7rem;transition:transform .2s;
+            display:inline-block;margin-right:8px}
+.row-toggle.open{transform:rotate(90deg)}
+.title-text{font-weight:500;color:#111827;line-height:1.4}
+.authors-text{font-size:.75rem;color:#9ca3af;margin-top:3px}
+.center-badge{display:inline-block;background:#d1fae5;color:#065f46;
+              border-radius:20px;padding:3px 10px;font-size:.71rem;
+              font-weight:600;max-width:200px;overflow:hidden;
+              text-overflow:ellipsis;white-space:nowrap}
+
+/* Score circle */
+.score-circle{width:38px;height:38px;border-radius:50%;display:inline-flex;
+              align-items:center;justify-content:center;font-weight:800;
+              font-size:.95rem;color:#fff;flex-shrink:0}
+.score-high{background:#059669}
+.score-mid{background:#d97706}
+.score-low{background:#dc2626}
+.score-xlow{background:#9ca3af}
+.score-label{font-size:.68rem;color:#9ca3af;margin-top:3px;text-align:center}
+.score-cell{text-align:center}
+
+/* TRL badges */
+.trl-badge{display:inline-block;border-radius:20px;padding:3px 9px;
+           font-size:.68rem;font-weight:700;white-space:nowrap}
+.trl-concept{background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db}
+.trl-prototype{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+.trl-validated{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+
+/* Coherence badges */
+.coherence-badge{display:inline-block;border-radius:20px;padding:3px 9px;
+                 font-size:.68rem;font-weight:700;white-space:nowrap;margin-top:4px}
+.coherence-ok{background:#dcfce7;color:#15803d}
+.coherence-warn{background:#fef3c7;color:#92400e}
+
+/* Exclusion badge */
+.excl-badge{display:inline-block;background:#fee2e2;color:#991b1b;
+            border-radius:4px;font-size:.65rem;font-weight:700;
+            padding:2px 7px;margin-left:6px;vertical-align:middle}
+.disc-badge{display:inline-block;background:#ede9fe;color:#7c3aed;
+            border-radius:4px;font-size:.65rem;font-weight:700;
+            padding:1px 6px;margin-left:6px;vertical-align:middle}
+
+.summary-text{font-size:.82rem;color:#4b5563;line-height:1.5;max-width:260px}
+
+/* Disclosure panel */
+.disc-row td{padding:0;border-bottom:none}
+.disc-panel{display:none;background:#f0fdf4;
+            border-top:2px solid #059669;
+            border-bottom:2px solid #e5e7eb;
+            animation:slideDown .18s ease}
+.disc-panel.open{display:block}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.disc-inner{padding:24px 28px}
+
+/* Legal disclaimer banner */
+.legal-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;
+              padding:12px 16px;margin-bottom:20px;
+              font-size:.8rem;color:#991b1b;font-weight:600;
+              display:flex;align-items:flex-start;gap:8px}
+.legal-banner svg{flex-shrink:0;margin-top:1px}
+
+/* TRL pill in disclosure */
+.trl-pill{display:inline-flex;align-items:center;gap:6px;
+          border-radius:20px;padding:5px 14px;font-size:.8rem;font-weight:700}
+.trl-pill-concept{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+.trl-pill-prototype{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}
+.trl-pill-validated{background:#dcfce7;color:#14532d;border:1px solid #86efac}
+
+/* IP risk flags */
+.flag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.flag-pill{display:inline-block;border-radius:20px;padding:3px 10px;
+           font-size:.72rem;font-weight:600;white-space:nowrap}
+.flag-warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.flag-ok{background:#dcfce7;color:#14532d;border:1px solid #86efac}
+
+/* Mandatory filing fields section */
+.mandatory-section{margin-top:20px;padding-top:16px;border-top:2px dashed #d1fae5}
+.mandatory-section h3{font-size:.7rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.8px;color:#059669;margin-bottom:12px}
+.field-incomplete{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;
+                  padding:6px 10px;font-size:.78rem;color:#92400e;font-style:italic}
+
+/* Disclosure header + grid */
+.disc-header{font-size:1rem;font-weight:700;color:#064e3b;
+             margin-bottom:16px;padding-bottom:14px;
+             border-bottom:1px solid #d1fae5}
+.disc-meta-row{display:flex;align-items:center;gap:12px;
+               margin-bottom:20px;flex-wrap:wrap}
+.disc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.disc-grid{grid-template-columns:1fr}}
+.disc-card{background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:16px 18px}
+.disc-card.full{grid-column:1/-1}
+.disc-card h4{font-size:.68rem;font-weight:700;text-transform:uppercase;
+              letter-spacing:.6px;color:#059669;margin-bottom:8px}
+.disc-card p{font-size:.85rem;color:#374151;line-height:1.65;white-space:pre-line}
+
+/* Empty state */
+.empty-state{text-align:center;padding:64px 20px;color:#9ca3af}
+.empty-state p{margin-top:10px;font-size:.9rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#127807; IP Discovery Dashboard</h1>
+  <p>CGIAR Agricultural Research Network &mdash; Innovation &amp; Commercialisation Intelligence</p>
+</header>
+
+<div class="overview" id="overview"></div>
+
+<div class="table-section">
+  <div class="table-controls">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0
+                 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5
+                 5.5 0 0 1 11 0"/>
+      </svg>
+      <input id="search" type="search"
+             placeholder="Search title, abstract, centre, TRL level ..."/>
+    </div>
+    <div class="sort-wrap">
+      <label for="sort-select">Sort by</label>
+      <select id="sort-select">
+        <option value="score-desc">Score (highest first)</option>
+        <option value="score-asc">Score (lowest first)</option>
+        <option value="semantic-desc">Semantic similarity</option>
+        <option value="title-asc">Title A-Z</option>
+      </select>
+    </div>
+    <span class="result-count" id="result-count"></span>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px"></th>
+          <th>Title &amp; Authors</th>
+          <th>Centre</th>
+          <th class="score-cell">Score</th>
+          <th>TRL</th>
+          <th>Coherence</th>
+          <th>Invention Summary</th>
+          <th>Target Organisations</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#d1d5db" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803 7.5 7.5 0 0 0 15.803 15.803z"/>
+      </svg>
+      <p>No papers match your filters.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const PAPERS  = {{ papers_json }};
+const SUMMARY = {{ summary_json }};
+
+/* ── Overview stats ── */
+(function renderOverview(){
+  const el = document.getElementById("overview");
+  const stats = [
+    { num: SUMMARY.total_fetched,     lbl: "Papers Screened",        sub: "from CGSpace live API" },
+    { num: SUMMARY.total_filtered,    lbl: "Invention Candidates",   sub: "passed pre-screening & semantic filter" },
+    { num: SUMMARY.total_disclosures, lbl: "Disclosures Drafted",    sub: "full IP documents" },
+  ];
+  el.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="num">${s.num}</div>
+      <div class="lbl">${s.lbl}</div>
+      <div class="sub">${s.sub}</div>
+    </div>`).join("");
+})();
+
+/* ── Helpers ── */
+function scoreClass(s){
+  if (s >= 8) return "score-high";
+  if (s >= 5) return "score-mid";
+  if (s >= 3) return "score-low";
+  return "score-xlow";
+}
+
+function trlClass(trl){
+  if (!trl) return "trl-concept";
+  const t = trl.toLowerCase();
+  if (t.includes("validated")) return "trl-validated";
+  if (t.includes("prototype")) return "trl-prototype";
+  return "trl-concept";
+}
+
+function trlShort(trl){
+  if (!trl) return "—";
+  if (trl.toLowerCase().includes("validated")) return "Validated";
+  if (trl.toLowerCase().includes("prototype")) return "Prototype";
+  return "Concept";
+}
+
+function trlPillClass(trl){
+  if (!trl) return "trl-pill-concept";
+  const t = trl.toLowerCase();
+  if (t.includes("validated")) return "trl-pill-validated";
+  if (t.includes("prototype")) return "trl-pill-prototype";
+  return "trl-pill-concept";
+}
+
+function flagPills(flagText){
+  if (!flagText) return '<span class="flag-pill flag-ok">No flags — standard IP review recommended</span>';
+  return flagText.split("\n").map(f => {
+    const isOk = f.toLowerCase().includes("no flags");
+    return `<span class="flag-pill ${isOk ? "flag-ok" : "flag-warn"}">${f.trim()}</span>`;
+  }).join("");
+}
+
+/* ── Sort + filter ── */
+function sortRows(rows, order){
+  const r = [...rows];
+  if (order === "score-desc")    r.sort((a,b) => b.commercial_score - a.commercial_score);
+  if (order === "score-asc")     r.sort((a,b) => a.commercial_score - b.commercial_score);
+  if (order === "semantic-desc") r.sort((a,b) => b.semantic_score   - a.semantic_score);
+  if (order === "title-asc")     r.sort((a,b) => a.title.localeCompare(b.title));
+  return r;
+}
+
+function filterRows(rows, q){
+  if (!q) return rows;
+  const lq = q.toLowerCase();
+  return rows.filter(r =>
+    r.title.toLowerCase().includes(lq) ||
+    (r.abstract || "").toLowerCase().includes(lq) ||
+    (r.collection || "").toLowerCase().includes(lq) ||
+    (r.authors || "").toLowerCase().includes(lq) ||
+    (r.invention_description || "").toLowerCase().includes(lq) ||
+    (r.trl_estimate || "").toLowerCase().includes(lq) ||
+    (trlShort(r.trl_estimate) || "").toLowerCase().includes(lq)
+  );
+}
+
+/* ── Disclosure HTML ── */
+function disclosureHTML(r){
+  if (r.topic === "excluded"){
+    return `
+      <div class="legal-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0
+                   000-3L12.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        Excluded from invention pipeline: ${r.excluded_reason || "not an invention candidate"}
+      </div>
+      <div class="disc-header">&#128196; ${r.title}</div>
+      <div class="disc-grid">
+        <div class="disc-card full"><h4>Exclusion Reason</h4>
+          <p>${r.excluded_reason || "N/A"}</p></div>
+      </div>`;
+  }
+
+  if (!r.disclosure){
+    return `
+      <div class="disc-header">&#128196; ${r.title}</div>
+      <div class="disc-grid">
+        <div class="disc-card full"><h4>Invention Summary</h4>
+          <p>${r.invention_description}</p></div>
+        <div class="disc-card"><h4>Commercial Reasoning</h4>
+          <p>${r.reasoning}</p></div>
+        <div class="disc-card"><h4>Target Organisations</h4>
+          <p>${r.org_types.map(o=>"- "+o).join("\n")}</p></div>
+      </div>
+      <p style="font-size:.8rem;color:#9ca3af;margin-top:16px;font-style:italic">
+        Full disclosure available for top-ranked candidates only.</p>`;
+  }
+
+  const d = r.disclosure;
+  return `
+    <div class="legal-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0
+                 000-3L12.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      ${d.legal_disclaimer}
+    </div>
+
+    <div class="disc-header">&#128196; Invention Disclosure &mdash; ${d.invention_title}</div>
+
+    <div class="disc-meta-row">
+      <span class="trl-pill ${trlPillClass(d.trl_estimate)}">
+        &#128204; TRL: ${d.trl_estimate || "Unknown"}
+      </span>
+      <div class="flag-list">${flagPills(d.ip_risk_flags)}</div>
+    </div>
+
+    <div class="disc-grid">
+      <div class="disc-card"><h4>Problem it solves</h4><p>${d.problem_solved}</p></div>
+      <div class="disc-card"><h4>Technical approach</h4><p>${d.technical_approach}</p></div>
+      <div class="disc-card"><h4>What makes it novel</h4><p>${d.novelty}</p></div>
+      <div class="disc-card"><h4>Commercial reasoning</h4><p>${r.reasoning}</p></div>
+      <div class="disc-card"><h4>Potential commercial applications</h4>
+        <p>${d.commercial_applications}</p></div>
+      <div class="disc-card"><h4>Suggested licensing model</h4>
+        <p>${d.licensing_model}</p></div>
+    </div>
+
+    <div class="mandatory-section">
+      <h3>&#128203; Mandatory fields for IP process — complete before any external use</h3>
+      <div class="disc-grid">
+        <div class="disc-card">
+          <h4>Inventors</h4>
+          <p class="${d.inventor_names && d.inventor_names.includes('manual') ? 'field-incomplete' : ''}">${d.inventor_names || '—'}</p>
+        </div>
+        <div class="disc-card">
+          <h4>Institutional affiliation</h4>
+          <p>${d.institutional_affiliation || '—'}</p>
+        </div>
+        <div class="disc-card">
+          <h4>First public disclosure</h4>
+          <p class="${d.first_public_disclosure && d.first_public_disclosure.includes('verify') ? 'field-incomplete' : ''}">${d.first_public_disclosure || '—'}</p>
+        </div>
+        <div class="disc-card">
+          <h4>Funding source</h4>
+          <p class="${d.funding_source && d.funding_source.includes('manual') ? 'field-incomplete' : ''}">${d.funding_source || '—'}</p>
+        </div>
+        <div class="disc-card full">
+          <h4>Technology Transfer Office contact</h4>
+          <p>${d.tto_contact || '—'}</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ── Main render ── */
+function render(){
+  const q     = document.getElementById("search").value.trim();
+  const order = document.getElementById("sort-select").value;
+  const rows  = sortRows(filterRows(PAPERS, q), order);
+  const tbody = document.getElementById("tbody");
+  const empty = document.getElementById("empty-state");
+  const count = document.getElementById("result-count");
+
+  count.textContent = `Showing ${rows.length} of ${PAPERS.length} papers`;
+  tbody.innerHTML   = "";
+  empty.style.display = rows.length ? "none" : "block";
+
+  rows.forEach(r => {
+    const isExcluded = r.topic === "excluded";
+    const hasDisc    = !!r.disclosure;
+
+    const dataRow = document.createElement("tr");
+    dataRow.className = "paper-row" + (isExcluded ? " excluded-row" : "");
+    dataRow.dataset.id = r.id;
+
+    const authParts = (r.authors || "").split(";");
+    const authorsShort = authParts.slice(0,2).join(";").trim()
+      + (authParts.length > 2 ? " ..." : "");
+
+    /* TRL cell */
+    const trlHtml = isExcluded
+      ? `<span class="trl-badge trl-concept">—</span>`
+      : `<span class="trl-badge ${trlClass(r.trl_estimate)}">${trlShort(r.trl_estimate)}</span>`;
+
+    /* Coherence cell */
+    let cohHtml = "";
+    if (isExcluded){
+      cohHtml = `<span class="excl-badge">Not an invention</span>`;
+    } else if (r.coherence_flag === true || r.coherence_flag === 1){
+      cohHtml = `<span class="coherence-badge coherence-ok">&#10003; Coherent</span>`;
+    } else if (r.coherence_flag === false || r.coherence_flag === 0){
+      cohHtml = `<span class="coherence-badge coherence-warn">&#9651; Flagged</span>`;
+    } else {
+      cohHtml = `<span class="coherence-badge coherence-warn">—</span>`;
+    }
+
+    dataRow.innerHTML = `
+      <td><span class="row-toggle" id="tog-${r.id}">${isExcluded ? "" : "&#9658;"}</span></td>
+      <td>
+        <div class="title-text">
+          ${r.title}
+          ${hasDisc ? '<span class="disc-badge">DISCLOSURE</span>' : ""}
+          ${isExcluded ? '<span class="excl-badge">Excluded</span>' : ""}
+        </div>
+        <div class="authors-text">${authorsShort}</div>
+      </td>
+      <td><span class="center-badge" title="${r.collection}">${r.collection}</span></td>
+      <td class="score-cell">
+        <span class="score-circle ${scoreClass(r.commercial_score)}">${r.commercial_score}</span>
+        <div class="score-label">/ 10</div>
+      </td>
+      <td>${trlHtml}</td>
+      <td>${cohHtml}</td>
+      <td><div class="summary-text">${r.invention_description}</div></td>
+      <td style="font-size:.78rem;color:#6b7280">${(r.org_types||[]).join(" | ")}</td>
+    `;
+
+    /* Disclosure / detail row */
+    const discRow = document.createElement("tr");
+    discRow.className = "disc-row";
+    const td = document.createElement("td");
+    td.colSpan = 8;
+    const panel = document.createElement("div");
+    panel.className = "disc-panel";
+    panel.id = `disc-${r.id}`;
+    panel.innerHTML = `<div class="disc-inner">${disclosureHTML(r)}</div>`;
+    td.appendChild(panel);
+    discRow.appendChild(td);
+
+    if (!isExcluded){
+      dataRow.addEventListener("click", () => {
+        const p   = document.getElementById(`disc-${r.id}`);
+        const tog = document.getElementById(`tog-${r.id}`);
+        const row = document.querySelector(`.paper-row[data-id="${r.id}"]`);
+        const open = p.classList.toggle("open");
+        tog.classList.toggle("open", open);
+        row.classList.toggle("expanded", open);
+      });
+    }
+
+    tbody.appendChild(dataRow);
+    tbody.appendChild(discRow);
+  });
+}
+
+document.getElementById("search").addEventListener("input", render);
+document.getElementById("sort-select").addEventListener("change", render);
+render();
+</script>
+</body>
+</html>

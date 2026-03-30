@@ -1,0 +1,16 @@
+# Generated files — rebuilt on each pipeline run
+data/
+database.db
+/dashboard.html
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
